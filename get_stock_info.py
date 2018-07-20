@@ -58,7 +58,7 @@ def _url(url, params):
 
 def get_ts_data(symbol=None, interval=None, outputsize=None, api_key=None, adjusted=False, session=None):
     session = _init_session(session)
-
+    symbol = symbol + '.SA'
     # apikey
     if api_key is None:
         api_key = ALPHAVANTAGE_API_KEY_DEFAULT
@@ -132,7 +132,7 @@ def get_ts_data(symbol=None, interval=None, outputsize=None, api_key=None, adjus
         df["Volume"] = df["Volume"].astype(int)
         df.index = pd.to_datetime(df.index)
         df.index.name = "Date"
-        return df, metadata
+        return df , metadata
     else:
         params["apikey"] = "HIDDEN"
         raise Exception(r.status_code, r.reason, url_long)
@@ -151,30 +151,27 @@ papel = sys.argv
 # moving_average = df['score'].rolling(window=period).mean().iloc[-1]
 expire_after = datetime.timedelta(days=1)
 session = requests_cache.CachedSession(cache_name='cache', backend='sqlite', expire_after=expire_after)
-
+symbols = ['ITUB4','BBAS3','GOAU4','MRVE3','BBDC4','PETR4','CCRO3','VAlE3','ABEV3']
+#symbols = ['^BVSP']
+#symbols = ['ABEV3']
 api_key = os.environ.get("ALPHAVANTAGE_API_KEY")  # api_key = "YOURAPIKEY"
-#df = get_ts_data(symbol="CCRO3.SA", interval="D", api_key=api_key, session=session)
 interval = "5T"
-symbol='ITUB4'
+for symbol in symbols:
+    # new symbols
+#df = get_ts_data(symbol="CCRO3.SA", interval="D", api_key=api_key, session=session)
+    print ("Parsing data for %s",symbol)
+    #df_temp = pd.read_csv("csvs/{}.csv".format(symbol), sep='\t', index_col="Date", parse_dates=True,usecols=['Date', 'Close'], na_values=['nan'])
+    #last_date = df_temp.index[-1]
+    #del df_temp
+    #print ("Last date is got data of %s was %s",last_date)
+    df, metadata = get_ts_data(symbol="{}".format(symbol), interval="D", api_key=api_key, session=session)
 
-df_temp = pd.read_csv("csvs/{}.csv".format(symbol), sep='\t', index_col="Date", parse_dates=True,usecols=['Date', 'Close'], na_values=['nan'])
-last_date = df_temp.index[-1]
-del df_temp
-#print last['Name']
-#exit()
-print ("Last date is got data of %s was %s",last_date)
-#df, metadata = get_ts_data(symbol="{}".format(symbol), interval="D", api_key=api_key, session=session)
-df, metadata = get_ts_data(symbol="{}.SA".format(symbol), interval="D", api_key=api_key, session=session)
-df =  df[df.index > last_date]
-df.to_csv('csvs/{}.csv'.format(symbol),sep='\t',mode = 'a',header=False)
-
-exit()
-print ("Checking papel %s",papel)
-print(df.dtypes)
-print(metadata)
+    #df =  df[df.index > last_date]
+    #df.to_csv('csvs/{}.csv'.format(symbol),sep='\t',mode = 'a',header=False)
+    df.to_csv('csvs/{}.csv'.format(symbol),sep='\t',mode = 'a',header=True)
 #sys.exit(1)
 #df['mediamovelsimples'] = Series((df['High']*2), index=df.index)
-
+exit()
 last_five = list()
 #last_five = [1,1,1,1,1]
 periods = 5
