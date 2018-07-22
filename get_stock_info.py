@@ -1,10 +1,12 @@
+#!/usr/bin/python
+
 import requests
 from pandas.io.common import urlencode
 from pandas.tseries.frequencies import to_offset
 import pandas as pd
+from pymongo import MongoClient
+import pymongo
 
-
-#import pymongo
 #from pymongo import MongoClient
 #from alpha_vantage.timeseries import TimeSeries
 #from pandas import Series,DataFrame
@@ -15,27 +17,6 @@ ALPHAVANTAGE_API_KEY_DEFAULT = "BCG76IDVSIVKYQVJ"
 
 
 # https://gist.github.com/femtotrader/e57bc5aefb15d41de379b8dd5cefc802
-
-# Stock data
-#ts = TimeSeries(key='BCG76IDVSIVKYQVJ')
-#data, meta_data = ts.get_intraday('CSNA3')
-
-# Connect DB
-#connection = MongoClient('mongodb://localhost:27017/marketing')
-#connection.database_names()
-#db = connection.marketing
-
-
-# Save DB
-#stocks = db.CSNA3
-
-#from bson import json_util
-#data = json_util.loads(data)
-
-#jsonString = jsonString.replace("\"_id\":", "\"id\":");
-
-#stock_id = stocks.insert(data,check_keys=False)
-
 
 
 
@@ -115,23 +96,30 @@ def get_ts_data(symbol=None, interval=None, outputsize=None, api_key=None, adjus
         #ts = TimeSeries(key='BCG76IDVSIVKYQVJ')
         #dat, meta_data = ts.get_intraday('CSNA3')
         dat = r.json()
+        
         metadata = dat["Meta Data"]
         key_dat = list(dat.keys())[1]  # ugly
         ts = dat[key_dat]
-        df = pd.DataFrame(ts).T
-        df = df.rename(columns={
-            "1. open": "Open",
-            "2. high": "High",
-            "3. low": "Low",
-            "4. close": "Close",
-            "5. volume": "Volume",
-        })
-        for col in ["Open", "High", "Low", "Close"]:
-            if col in df.columns:
-                df[col] = df[col].astype(float)
-        df["Volume"] = df["Volume"].astype(int)
-        df.index = pd.to_datetime(df.index)
-        df.index.name = "Date"
+        #jsonData=json.loads(dat)
+        #idf = pd.DataFrame(ts).T
+        if function_api == "TIME_SERIES_INTRADAY":
+		print ts
+		df=pd.DataFrame(ts) 
+        else:
+		df = df.rename(columns={
+		    "1. open": "Open",
+		    "2. high": "High",
+		    "3. low": "Low",
+		    "4. close": "Close",
+		    "5. volume": "Volume",
+		})
+		for col in ["Open", "High", "Low", "Close"]:
+		    if col in df.columns:
+			df[col] = df[col].astype(float)
+		df["Volume"] = df["Volume"].astype(int)
+		df.index = pd.to_datetime(df.index)
+        df.index.name = "Date2"
+        df['Date'] = df.index
         return df , metadata
     else:
         params["apikey"] = "HIDDEN"
@@ -142,35 +130,62 @@ import os
 import pandas as pd
 pd.set_option("max_rows", 30)
 import datetime
+import json
 import requests_cache
 import sys
 import time
+from bson import json_util
 papel = sys.argv
 
 # moving average
 # moving_average = df['score'].rolling(window=period).mean().iloc[-1]
 expire_after = datetime.timedelta(days=1)
 session = requests_cache.CachedSession(cache_name='cache', backend='sqlite', expire_after=expire_after)
-symbols = ['ITUB4','BBAS3','GOAU4','MRVE3','BBDC4','PETR4','CCRO3','VAlE3','ABEV3']
+symbols = ['ITUB4','BBAS3','GOAU4','MRVE3','BBDC4','PETR4','CCRO3','VALE3','ABEV3']
 #symbols = ['^BVSP']
-#symbols = ['ABEV3']
 api_key = os.environ.get("ALPHAVANTAGE_API_KEY")  # api_key = "YOURAPIKEY"
 interval = "5T"
+client = pymongo.MongoClient("mongodb+srv://marcio:253apto102@cluster0-jgiql.gcp.mongodb.net/stocks")
+
+interval = '5T'
 for symbol in symbols:
     # new symbols
 #df = get_ts_data(symbol="CCRO3.SA", interval="D", api_key=api_key, session=session)
-    print ("Parsing data for %s",symbol)
+    print ("Parsing data for %s interval %s",symbol,interval)
     #df_temp = pd.read_csv("csvs/{}.csv".format(symbol), sep='\t', index_col="Date", parse_dates=True,usecols=['Date', 'Close'], na_values=['nan'])
     #last_date = df_temp.index[-1]
     #del df_temp
     #print ("Last date is got data of %s was %s",last_date)
-    df, metadata = get_ts_data(symbol="{}".format(symbol), interval="D", api_key=api_key, session=session)
+    df, metadata = get_ts_data(symbol="{}".format(symbol), interval="{}".format(interval), api_key=api_key, session=session)
 
     #df =  df[df.index > last_date]
     #df.to_csv('csvs/{}.csv'.format(symbol),sep='\t',mode = 'a',header=False)
-    df.to_csv('csvs/{}.csv'.format(symbol),sep='\t',mode = 'a',header=True)
+    #df.to_csv('csvs/{}.csv'.format(symbol),sep='\t',mode = 'a',header=True)
+    #df['TimeStamp'] = pd.to_datetime(df['TimeStamp'],dayfirst=True)
+    col = client[interval][symbol]
+    #db = client.stocks
+    #data = df.to_dict(orient='records')  
+    #df.index = df.index.astype(str)
+
+    print df.dtypes
+    records = json.loads(df.to_json()).values()
+    #`Aprint df.to_dict()
+    #print records[0] 
+    col.drop
+   # for row in records:
+    #   row['Date'] = datetime.datetime.strptime(row['Date'], "%Y/%m/%d %H:%M:%S")#
+  #  print records
+    #col.insert(records)
+    #col.insert_many(df.to_dict('records'))
+ #   col.insert_many(records)
+    print df.head
+    col.insert_many(df.to_dict('records'))
+
+
 #sys.exit(1)
 #df['mediamovelsimples'] = Series((df['High']*2), index=df.index)
+
+
 exit()
 last_five = list()
 #last_five = [1,1,1,1,1]
@@ -209,3 +224,5 @@ for i, row in df.iterrows():
 #print(df.sort_values(4))
 
 print (df)
+
+
